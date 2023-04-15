@@ -1,0 +1,68 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Get latest tag
+        id: latest_tag
+        run: echo "::set-output name=tag::$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1))"
+
+      - name: Check if current tag is newer
+        id: is_newer_tag
+        env:
+          CURRENT_TAG: ${{ github.ref }}
+          LATEST_TAG: ${{ steps.latest_tag.outputs.tag }}
+        run: |
+          VERSION_GREATER=$(printf '%s\n' "$CURRENT_TAG" "$LATEST_TAG" | sort -V | tail -n 1)
+          if [ "$CURRENT_TAG" = "$VERSION_GREATER" ]; then
+            echo "::set-output name=is_newer::true"
+          else
+            echo "::set-output name=is_newer::false"
+          fi
+
+      - name: Build
+        run: go build -o voxnote main.go
+
+      - name: Get latest tag
+        id: get_latest_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "Latest tag: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.LATEST_TAG }}
+          release_name: Release ${{ env.LATEST_TAG }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./voxnote
+          asset_name: voxnote
+          asset_content_type: application/octet-stream
