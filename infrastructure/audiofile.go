@@ -22,7 +22,6 @@ func NewAudioFileRepository() domain.AudioFileRepository {
 
 func (a *audioFileRepository) SplitAudioFileIfNeeded(filePath string) ([]string, error) {
 	fileExt := filepath.Ext(filePath)
-	extractedAudio := false
 
 	if isVideoFile(fileExt) {
 		newFilePath, err := a.extractAudioFromVideo(filePath)
@@ -30,14 +29,7 @@ func (a *audioFileRepository) SplitAudioFileIfNeeded(filePath string) ([]string,
 			return nil, err
 		}
 		filePath = newFilePath
-		extractedAudio = true
 	}
-
-	defer func() {
-		if extractedAudio {
-			a.CleanUp([]string{filePath})
-		}
-	}()
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
