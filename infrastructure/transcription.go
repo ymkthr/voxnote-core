@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -22,7 +21,7 @@ func NewTranscriptionService(apiKey string) domain.TranscriptionService {
 	return &transcriptionService{apiKey: apiKey}
 }
 
-func (t *transcriptionService) TranscribeAudioFile(filePath string) (string, error) {
+func (t *transcriptionService) TranscribeAudioFile(filePath string, requestFormat domain.ResponseFormat) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
@@ -46,6 +45,8 @@ func (t *transcriptionService) TranscribeAudioFile(filePath string) (string, err
 	if err != nil {
 		return "", err
 	}
+
+	err = writer.WriteField("response_format", string(requestFormat))
 
 	err = writer.Close()
 	if err != nil {
@@ -71,13 +72,10 @@ func (t *transcriptionService) TranscribeAudioFile(filePath string) (string, err
 		return "", fmt.Errorf("Transcription failed with status code %d", resp.StatusCode)
 	}
 
-	var result struct {
-		Text string `json:"text"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	return result.Text, nil
+	return string(bodyBytes), nil
 }

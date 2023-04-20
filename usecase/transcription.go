@@ -18,7 +18,7 @@ func NewTranscriptionUsecase(audioFileRepo domain.AudioFileRepository, transcrip
 		transcriptionService: transcriptionService,
 	}
 }
-func (t *transcriptionUsecase) TranscribeAudioFile(filePath string, outputPath string) error {
+func (t *transcriptionUsecase) TranscribeAudioFile(filePath string, outputPath string, responseFormat domain.ResponseFormat) error {
 	fmt.Println("Step 1/3: Checking and splitting audio file")
 	audioFiles, err := t.audioFileRepo.SplitAudioFileIfNeeded(filePath)
 	if err != nil {
@@ -29,7 +29,7 @@ func (t *transcriptionUsecase) TranscribeAudioFile(filePath string, outputPath s
 	fmt.Printf("Step 2/3: Transcribing audio file(s) (%d%%)\n", 0)
 	transcriptions := make([]string, len(audioFiles))
 	for i, file := range audioFiles {
-		transcription, err := t.transcriptionService.TranscribeAudioFile(file)
+		transcription, err := t.transcriptionService.TranscribeAudioFile(file, responseFormat)
 		if err != nil {
 			return err
 		}
